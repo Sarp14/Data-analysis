@@ -1,4 +1,4 @@
-# Ucitavanje neophodnih paketa
+#Loading the necessary libraries that will be used for the analysis 
 library(rjson)
 library(corrplot)
 library(e1071)
@@ -17,33 +17,33 @@ library(olsrr)
 library(viridis)
 library(TeachingSampling)
 
-# Podaci su prikupljeni sa sajta Kaggle: https://www.kaggle.com/datasets/undp/human-development
-# Za potrebe analize koriscena su dva csv fajla: human_development.csv koji sadrzi podatke o osnovim varijablama koriscenjim za merenje HDI indeksa i 
-# inequality_adjusted.csv koji sadrzi podatke o varijablama vezanim za ekonomsku nejednakost.
-# Iskoriscen je i fajl: gdp_per_capita.csv u kome se nalaze podaci za BDP po zemaljama za dugi niz godina. 
-# Ovde je koriscena samo kolona za 2015. godinu, kako bi se uklopila sa podacima iz prethodna dva csv fajla, gde svi podaci odgovaraju datoj godini. 
-# GDP fajl je takodje skinut sa Kaggle-a: https://www.kaggle.com/datasets/zgrcemta/world-gdpgdp-gdp-per-capita-and-annual-growths
+# Data is downloaded from Kaggle: https://www.kaggle.com/datasets/undp/human-development
+# For the analysis, two CSV files were used: human_development.csv, which contains data on the basic variables used to measure the HDI index, 
+# and inequality_adjusted.csv, which contains data on variables related to economic inequality. 
+# The file gdp_per_capita.csv was also used, which contains GDP data by country for a long period.  
+# Only the column for the year 2015 was used to align with the data from the previous two CSV files, where all data corresponds to the given year. 
+# The GDP file was also downloaded from Kaggle: https://www.kaggle.com/datasets/zgrcemta/world-gdpgdp-gdp-per-capita-and-annual-growths.
 
 
-# Ucitavanje samih podataka, za human development skup podataka
+# Loading the data itself, for the human development dataset
 hdi <- read.csv("/Users/ndamljanovic/Downloads/archive/human_development.csv")
 
-# Pregled tabele i kolona 
+# View of tables and columns
 View(hdi)
 head(hdi)
 str(hdi)
 
-# Konvertovanje GNI per capita kolone u numericku 
+# Converting GNI per capita column into a numeric type
 hdi$Gross.National.Income..GNI..per.Capita <- as.numeric(gsub(",", ".", gsub("\\.", "", 
                                                  hdi$Gross.National.Income..GNI..per.Capita)))
 
 str(hdi$Gross.National.Income..GNI..per.Capita)
 
-# Evidencija i uklanjanje nedostajucih vrednosti za HDI skup podataka
+# Checking and removing missing values for the HDI dataset
 sum(is.na(hdi))
 hdi_new <- na.omit(hdi)
 
-# Skup podataka za BDP po glavi stanovnika, izdvojicemo kolonu koja se odnosi na 2015. godinu 
+# Dataset for GDP per capita, we will extract the column related to the year 2015
 gdp <- read.csv("/Users/ndamljanovic/Downloads/archive (9)/gdp_per_capita.csv")
 str(gdp)
 
@@ -53,35 +53,35 @@ gdp_2015 <- gdp %>%
 
 View(gdp_2015)
 
-# Uklonicemo nedostajuce vrednosti
+# Removing NA values
 gdp_2015 <- na.omit(gdp_2015)
 
-# Ucitavanje samih podataka, za inequality skup podataka
+# Loading the data itself, for the inequality dataset
 ineq <- read.csv("/Users/ndamljanovic/Downloads/archive/inequality_adjusted.csv")
 
-# Pregled tabele i kolona
+# View of tables and columns
 View(ineq)
 head(ineq)
 str(ineq)
 
-# Evidencija i uklanjanje nedostajucih vrednosti za inequality skup podataka
+# Checking and removing missing values for the inequality dataset
 sum(is.na(ineq))
 ineq_new <- na.omit(ineq)
 View(ineq_new)
 
-# Dodacemo kolonu za BDP po glavni stanovnika za 2015 godinu HDI skupu podataka po koloni koja sadrzi imena drzava
+# We will add a column for GDP per capita for the year 2015 to the HDI dataset based on the column that contains country names
 hdi_new <- hdi_new %>%
   left_join(gdp_2015 %>% select(Country, GDP_per_cap), by = "Country")
 
 View(hdi_new)
 
-# Spajanje HDI sa novom GDP kolonom i Inequality skupova podataka po koloni koja sadrzi imena drzava
+# Merging the HDI dataset with the new GDP column and the Inequality dataset based on the column that contains country names
 merged_data <- hdi_new %>%
   left_join(ineq_new %>% select(Country, Income.Inequality..Quintile.Ratio., 
                                 Income.Inequality..Palma.Rati., Income.Inequality..Gini.Coefficient.), by = "Country")
 View(merged_data)
 
-# Dodelicmo svim kolonama drugacija imena radi bolje citljivosti 
+# We will assign different names to all columns for better readability
 new_column_names <- c("HDI_rank", "Country", "HDI", "Life_expectancy", "Expected_years_of_educ", "Mean_educ", "GNI_per_capita",
                       "GNI_per_cap_minus_HDI_rank", "GDP_per_capita" , "Inequality_quintile_rank", "Inequality_palma_ratio", "Gini_coef")  
 
@@ -91,11 +91,11 @@ View(merged_data)
 str(merged_data)
 
 
-# Vidimo na novi skup podataka sadrzi 26 nedostajucih vrednosti 
+# We can see that the new dataset contains 26 missing values
 sum(is.na(merged_data))
 
 
-# Vizualizacija nedostajucih vrednosti u novom skupu podataka
+# Visualization of missing values in the new dataset
 gg_miss_var(merged_data) +
   labs(title = "Prikaz nedostajucih vrednosti", 
        x = "Varijable", y = "Broj nedostajucih vrednosti") +
@@ -103,11 +103,11 @@ gg_miss_var(merged_data) +
   theme(axis.text = element_text(size = 8)) +
   theme(plot.title = element_text(hjust = 0.5))
 
-# Mozemo videti da su svih 26 nedostajucih vrednosti prisutne u GDP_per_capita koloni 
-# Kada pogledamo skup podataka preko View() funkcije mozemo videti da zapravo tri kolone vezane za nejednakost
-# sadrze nepostoje vrednosti, tacnije .. sto R iz nekog razloga ne prepoznaje kao NA, tj nedostajuce vrednosti.
+# We can see that all 26 missing values are present in the GDP_per_capita column
+# When we inspect the dataset using the View() function, we can see that three columns related to inequality
+# actually contain missing values, specifically ".." which R, for some reason, does not recognize as NA, i.e., missing values.
 
-# Zamenicemo sve celije koje sadrze .. sa NA kako bismo ponovili vizualizaciju i stekli uvid o pravom broju NA vrednosti
+# We will replace all cells containing ".." with NA to repeat the visualization and gain insight into the actual number of NA values
 merged_data[merged_data == ".."] <- NA
 gg_miss_var(merged_data) +
   labs(title = "Prikaz nedostajucih vrednosti", 
@@ -116,12 +116,12 @@ gg_miss_var(merged_data) +
   theme(axis.text = element_text(size = 8)) +
   theme(plot.title = element_text(hjust = 0.5)) 
 
-# Nakon izvrsene zamene vidimo da zapravo te tri kolone prednjace sto se NA vrednosti tice, dok je GDP_per_capita na 4. mestu
-# Zamenicemo NA vrednosti u datim kolonama sa medijalnim vrednostima tih kolona, kako ne bismo izgubili znacajan deo populacije
-# sa obzirom da u tim kolonama .. tj NA vrednosti idu i preko 40
+# After the replacement, we see that those three columns actually lead in terms of NA values, while GDP_per_capita is in 4th place
+# We will replace the NA values in the given columns with the median values of those columns to avoid losing a significant portion of the population,
+# since there are over 40 instances of ".." or NA values in those columns.
 
-# Mozemo uociti da su poslednje tri varijable, vezane za ekonomsku nejednakost u char tipu, zbog toga ih prebacujemo u numericki
-# tip kako bismo mogli da unesemo medijalne vrednosti
+# We can observe that the last three variables related to economic inequality are of character type, so we will convert them to numeric
+# type in order to be able to input the median values.
 
 str(merged_data)
 
@@ -130,19 +130,19 @@ merged_data <- merged_data %>%
          Inequality_palma_ratio = as.numeric(Inequality_palma_ratio),
          Gini_coef = as.numeric(Gini_coef))
 
-# Unosimo medijalne vrednosti za date 4 kolone umesto nedostajucih vrednosti
+# We are inputting the median values for the given 4 columns in place of the missing values
 merged_data <- merged_data %>%
   mutate_at(vars(GDP_per_capita, Inequality_quintile_rank, Inequality_palma_ratio, Gini_coef),
             ~ ifelse(is.na(.), median(., na.rm = TRUE), .))
 
-# Vidimo da vise nemamo nedostajucih vrednosti u datom skupu podataka
+# We can see that there are no longer any missing values in the given dataset
 sum(is.na(merged_data))
 View(merged_data)
 
-# Vizualizacija celokupnog skupa podataka, nakon spajanja vise tabela i kolona zajedno. 
-# Prikazana je choroplet mapa uz pomoc Ploty paketa za interaktivnu vizualizaciju,na mapi su prikazani neki od kljucnih indikatora ljudskog razvoja,
-# sam HDI index, BNP po glavi stanovnika, Gini koeficijent i ocekivani zivotni vek. Raspon boja reflektuje razlicite HDI nivoe razlicitih zeamalja. 
-# Mozemo uociti jasnu razliku u nivou HDI indeksa medju razlicitim zemljama i grupama zemalja, koja korespondira i sa ostalim indikatorima. 
+# Visualization of the entire dataset, after merging multiple tables and columns together.
+# A choropleth map is displayed using the Plotly package for interactive visualization, showing some of the key human development indicators,
+# including the HDI index, GDP per capita, Gini coefficient, and life expectancy. The color range reflects different HDI levels across various countries.
+# We can observe a clear difference in the level of the HDI index among different countries and groups of countries, which corresponds with other indicators as well.
 map <- plot_ly(data = merged_data, type = "choropleth", locations = ~Country,
                locationmode = "country names", colorscale = "Cividis",
                z = ~HDI,
@@ -154,35 +154,34 @@ map <- plot_ly(data = merged_data, type = "choropleth", locations = ~Country,
 
 map <- map %>% layout(title = "Prikaz kljucnih HDI indikatora za ceo svet", margin = list(t = 130))
 
-# Prikaz mape
 map
 
-# Uzorokovanje - koristimo varijablu bruto domaci proizvod po glavi stanovnika (GDP_per_capita)
+# Sampling - we are using the variable gross domestic product per capita (GDP_per_capita)
 n <- 50
 set.seed(321)
 
-# Odabir verovatnoce svake jedinice proporcionalne varijabli BDP po glavi stanovnika
+# Selecting the probability of each unit proportional to the GDP per capita variable
 res <- S.piPS(n, merged_data$Gini_coef)
-# Selektovani uzorak
+# Selected sample
 sam <- res[,1]
-# Verovatnoce ukljucivanja svake jedinice u uzorku
+# Probabilities of including each unit in the sample
 Pik.s <- res[,2]
-# Kreira se novi data frame uzorak_hdi koji sadrzi jedinice dobijene PPS metodom bez ponavljanja
+# A new data frame sample_hdi is created, containing units obtained using the PPS method without replacement
 uzorak_hdi <- merged_data[sam,]
 
-# Pregled uzorka od 50 zemalja 
+# Preview of the sample of 50 countries
 View(uzorak_hdi)
 
-# Deskriptivna analiza uzorka 
+# Descriptive analysis of our sample
 
-# Vidimo da novi dataframe koji smo dobili uzorkovanjem sadrzi 50 redova i 12 kolona
-# Nakon izmena koje smo izvrsili sve kolone su kvantitativnog tipa sem kolone Drzava
+# We can see that the new dataframe obtained from sampling contains 50 rows and 12 columns
+# After the changes we made, all columns are quantitative except for the Country column
 str(uzorak_hdi)
 
-# Pregled sumarnih statistika na nivou celokupnog uzorka
+# Overview of summary statistics for the entire sample
 summary(uzorak_hdi[, !(names(uzorak_hdi) %in% c("HDI_rank", "Country"))])
 
-# Raspodela osnovnih deskriptivnih statistika za par najvaznijih varijabli 
+# Distribution of basic descriptive statistics for a few key variables
 ggplot(uzorak_hdi, aes(x = "", y = GDP_per_capita)) +
   geom_boxplot(fill = "red", alpha = 0.6, width = 0.6) +
   theme_minimal() +
@@ -209,10 +208,10 @@ ggplot(uzorak_hdi, aes(x = "", y = Mean_educ)) +
   ylab("Godine skolovanja")
 
 
-# Mozemo uociti veliki raspon u vrednostima medju odredjenim varijablama. 
-# Pogotovo kod GNI i GDP per capita, Gini coef, Mean_educ i HDI
+# We can observe a large range of values among certain variables.
+# Especially for GNI and GDP per capita, Gini coefficient, Mean_educ, and HDI.
 
-# Bar chart koji prikazuje zemlje po njihovom Dzini koeficijentu
+# Bar chart displaying countries by their Gini coefficient
 uzorak_hdi %>%
   arrange(Gini_coef) %>%
   plot_ly(x = ~Gini_coef, y = ~seq_along(Country),
@@ -223,7 +222,7 @@ uzorak_hdi %>%
          yaxis = list(title = ""))
 
 
-# Dijagram rasturanja za zemlje po BDP-u po glavi stanovika 
+# Scatter plot for countries by GDP per capita
 plot <- plot_ly(
   data = uzorak_hdi,
   x = ~Country,
@@ -240,11 +239,10 @@ plot <- plot_ly(
   margin = list(t = 80)  # Increase top margin
 )
 
-# Prikazivanje grafika
 plot
 
 
-# Korelaciona matrica numerickih varijabli 
+# Correlation matrix of numeric variables
 kvant_uzorak_hdi <- uzorak_hdi %>%
   select(-Country, -GNI_per_cap_minus_HDI_rank ,-HDI_rank)
 
@@ -266,57 +264,58 @@ ggcorrplot(cor_matrix_hdi,
   )
 
 
-# Dvostruki linearni model, koristimo Bruto domaci proizvod po glavi stanovnika i ocekivani zivotni vek, 
-# kao nezavisne i HDI indeks kao zavisnu promenljivu
+# Multiple linear model, using GDP per capita and life expectancy 
+# as independent variables and the HDI index as the dependent variable
 set.seed(123)
 model <- lm(HDI ~ GDP_per_capita + Life_expectancy, uzorak_hdi)
 summary(model)
 
-# Primecujemo da je model statisticki znacajan. Obe zavisne varijable ispoljavaju statisticku znacajnost: 
+# We note that the model is statistically significant. Both independent variables show statistical significance:
 # GDP_per_capita   7.837e-07  2.382e-07    3.29   0.0018 ** 
 # Life_expectancy  1.386e-02  1.126e-03   12.30   <2e-16 ***
 
-# Statisticki je znacajna i cela regresija sto vidimo po F statistici i njenoj p vrednosti: 
+# The entire regression is statistically significant, as seen from the F statistic and its p-value:
 # F-statistic:  137.1 on 2 and 52 DF,  p-value: < 2.2e-16
 
 
-# Vrednosti koeficijenta determinacije i prilagodjenog koeficijenta determinacije su: 
-# Multiple R-squared:  0.8406,	Adjusted R-squared:  0.8345  
-# Pri cemu zakljucujemo da vecinu  varijabiliteta (83%) zavisne promenljive mozemo objasniti datim modelom. 
+# The values of the coefficient of determination and the adjusted coefficient of determination are:
+# Multiple R-squared:  0.8406,   Adjusted R-squared:  0.8345  
+# From which we conclude that most of the variability (83%) of the dependent variable can be explained by the given model.
 
-# Testiracemo kljucne predpostavke linearnog modela
-# Da li reziduali modela imaju normalnu raspodelu
+# We will test the key assumptions of the linear model.
+# Do the residuals of the model have a normal distribution?
 
-# Vizuelni prikaz raspodele reziduala, vecina reziduala se nalazi na samoj krivi
+# Visual representation of the distribution of residuals; most residuals are located on the curve itself
 plot(model, 2, main = "Vizuelni prikaz raspodele reziduala")
 
-# Formalno testiranje uz pomoc Shapiro Wilk testa ukazuje da reziduali imaju normalnu raspodelu
-# p vrednost u ovom slucaju iznosi 0.97476, tacnije veca je od 0.05 (0.2982) zbog cega mozemo zakljuciti da su 
-# rezidualni normalno raspodeljeni
+# Formal testing using the Shapiro-Wilk test indicates that the residuals have a normal distribution.
+# The p-value in this case is 0.97476, which is greater than 0.05 (0.2982), allowing us to conclude that the
+# residuals are normally distributed.
 set.seed(123)
 shapiro.test(model$residuals)
 
-# Korelacija dve nezavisne varijable
+# Correlation of the two independent variables
 cor(uzorak_hdi$GDP_per_capita, uzorak_hdi$Life_expectancy)
 
-# Koriscenjem Faktora rasta varijanse (Variance Inflation Factor) uocavamo da ne postoji izrazena multikolinearnost izmedju objasnjavajucih promenljivih
-# Vrednost FRV je izrazenija za vecu multikolinearnost, visoka za vrednost preko 10, dok je u datom modelu  1.372373
+# By using the Variance Inflation Factor (VIF), we observe that there is no pronounced multicollinearity between the explanatory variables.
+# The VIF value is more indicative of higher multicollinearity, with a high value being over 10, while in this model it is 1.372373.
 set.seed(123)
 vif(model)
 
-# Testiranje homoskedasticnosti, tacnije da li je varijansa za sve slucajne greske konstantna. Koriscen je Vajtov test
+# Testing for homoscedasticity, specifically whether the variance for all random errors is constant. The White test was used.
 set.seed(123)
 white_test(model)
 
-# Na osnovu rezultata Vajtovog testa: Null hypothesis: Homoskedasticity of the residuals
+# Based on the results of the White test: 
+# Null hypothesis: Homoscedasticity of the residuals
 # Alternative hypothesis: Heteroskedasticity of the residuals
 # Test Statistic: 5.47
 # P-value: 0.064886
-# Zakljucujemo da u modelu nema prisustva heteroskedasticnosti
+# We conclude that there is no presence of heteroscedasticity in the model.
 
-# Testiranje autokorelacije putem Durbin - Watson testa
+# Testing for autocorrelation using the Durbin-Watson test
 set.seed(123)
 durbinWatsonTest(model)
 
-# DW statistika je blizu 2 (1.749609) dok je p vrednost 0.29 veca od 0.05
-# Na osnovu cega zakljucujemo da ne postoji autokorelacijea prvog reda u datom regresionom modelu 
+# The DW statistic is close to 2 (1.749609), while the p-value is 0.29, which is greater than 0.05.
+# Based on this, we conclude that there is no first-order autocorrelation in the given regression model.
